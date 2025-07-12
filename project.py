@@ -1,7 +1,19 @@
 from cryptography.fernet import Fernet, InvalidToken
+from os import makedirs
+from os.path import exists
 
 
 def main():
+    init_directory()
+
+def init_directory():
+    if not exists("credentials"):
+        print("No existing credentials were found.")
+        makedirs("credentials/passwords")
+        makedirs("credentials/keys")
+    else:
+        print("Existing crentials were found!")
+
     show_menu()
 
 
@@ -29,11 +41,12 @@ def show_menu():
 def create_key(key_file):
     if key_file == "":
         return "The key can't be empty!"
+    key_path = f"credentials/keys/{key_file}.key"
     try:
-        with open(f"{key_file}.key") as _:
+        with open(key_path) as _:
             return f"There's already a file named {key_file}.key!"
     except FileNotFoundError:
-        with open(f"{key_file}.key", "wb") as f:
+        with open(key_path, "wb") as f:
             f.write(Fernet.generate_key())
         return f"Successfully created file named {key_file}.key"
 
@@ -41,19 +54,21 @@ def create_key(key_file):
 def create_pass(pass_file):
     if pass_file == "":
         return "The password file can't be empty!"
+    pass_path = f"credentials/passwords/{pass_file}.pass"
     try:
-        with open(f"{pass_file}.pass") as _:
+        with open(pass_path) as _:
             return f"There's already a file named {pass_file}.pass!"
     except FileNotFoundError:
-        with open(f"{pass_file}.pass", "w") as _:
+        with open(pass_path, "w") as _:
             return f"Successfully created file named {pass_file}.pass"
 
 
 def load_key(key_file):
     if key_file == "":
         return ""
+    key_path = f"credentials/keys/{key_file}.key"
     try:
-        with open(f"{key_file}.key", "rb") as f:
+        with open(key_path, "rb") as f:
             return f.read()
     except FileNotFoundError:
         return
@@ -63,8 +78,9 @@ def manage_pass(pass_file, key):
     if pass_file == "" or key == "":
         print("The password file/key can't be empty!")
         return
+    pass_path = f"credentials/passwords/{pass_file}.pass"
     try:
-        if open(f"{pass_file}.pass"):
+        if open(pass_path):
             if key == None:
                 print("The key doesn't exist!")
                 return
@@ -85,11 +101,11 @@ def manage_pass(pass_file, key):
                     print("The site/password can't be empty!")
                     continue
                 encrypt_pass = Fernet(key).encrypt(new_password.encode())
-                with open(f"{pass_file}.pass", "a") as f:
+                with open(pass_path, "a") as f:
                     f.write(f"{new_site}:{encrypt_pass.decode()}\n")
                 print(f"Successfully added password to {pass_file}.pass")
             case "g":
-                with open(f"{pass_file}.pass", "rb") as f:
+                with open(pass_path, "rb") as f:
                     list = f.readlines()
                 print("""\n          Passwords\n""")
                 for i, line in enumerate(list):
