@@ -95,7 +95,7 @@ def manage_pass(pass_file, key):
                 for i, line in enumerate(list):
                     site, encrypted_pass = line.decode().split(":")
                     try:
-                        password = Fernet(key).decrypt(encrypted_pass).decode()
+                        password = Fernet(key).decrypt(encrypted_pass.encode()).decode()
                         print(f"    {i + 1}. {site}: {password}")
                     except InvalidToken:
                         print(f"    {i + 1}. Invalid key!")
