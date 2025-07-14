@@ -21,10 +21,10 @@ def show_menu():
     while True:
         match input(
             """\n\n          Encrypted Password Manager\n
-    (_) Create a new key
-    (+) Create a new password file
-    (1) Open Password Manager
-    (Q) Quit\n\n"""
+    [_] Create a new key
+    [+] Create a new password file
+    [1] Open Password Manager
+    [Q] Quit\n\n"""
         ).lower().strip():
             case "_":
                 print(create_key(input("\nCreate a key named: ").strip()))
@@ -92,7 +92,7 @@ def manage_pass(pass_file, key):
         return
     while True:
         match input(
-            """\n(A) Add a new password\n(G) Get passwords\n(Q) Cancel\n\n"""
+            """\n[A] Add a new password\n[G] Get passwords\n[Q] Cancel\n\n"""
         ).lower().strip():
             case "a":
                 new_site = input("\nSite: ").strip()
