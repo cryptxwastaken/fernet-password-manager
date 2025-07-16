@@ -1,54 +1,66 @@
+import base64
 from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from os import makedirs
 from os.path import exists
+from os import urandom
 
 
 def main():
-    init_directory()
-
-def init_directory():
     if not exists("credentials"):
-        print("No existing credentials were found.")
         makedirs("credentials/passwords")
         makedirs("credentials/keys")
+        print("Credentials created.")
+
+    salt_path = "credentials/keys/salt.key"
+    if not exists(salt_path):
+        with open(salt_path, "wb") as f:
+            # Secure values are 16 bytes or longer
+            f.write(urandom(16))
+        print("Salt file created.")
     else:
-        print("Existing crentials were found!")
+        print("Exisiting salt file found.")
 
     show_menu()
+
+
+def read_salt():
+    salt_path = "credentials/keys/salt.key"
+    if exists(salt_path):
+        with open(salt_path, "rb") as f:
+            salt = f.read()
+    return salt
+
+def derive_key(salt, master_password):
+    kdf = PBKDF2HMAC(
+    algorithm = hashes.SHA256(),
+    length = 32,
+    salt = salt,
+    # As of January 2025 Django recommends at least 1,200,000 iterations
+    iterations = 1_200_000,
+    )
+    # Fernet requires keys to be URL-safe Base64 encoded 
+    return base64.urlsafe_b64encode(kdf.derive(master_password.encode()))
 
 
 def show_menu():
     while True:
         match input(
             """\n\n          Encrypted Password Manager\n
-    [_] Create a new key
     [+] Create a new password file
     [1] Open Password Manager
     [Q] Quit\n\n"""
         ).lower().strip():
-            case "_":
-                print(create_key(input("\nCreate a key named: ").strip()))
             case "+":
                 print(create_pass(input("\nCreate a password file named: ").strip()))
             case "1":
-                manage_pass(
-                    input("\nPassword file: ").strip(), load_key(input("Key: ").strip())
+                master_password = input("Master password: ")
+                password_manager(
+                    input("\nPassword file: ").strip(), derive_key(read_salt(), master_password)
                 )
             case "q":
                 break
-
-
-def create_key(key_file):
-    if key_file == "":
-        return "The key can't be empty!"
-    key_path = f"credentials/keys/{key_file}.key"
-    try:
-        with open(key_path) as _:
-            return f"There's already a file named {key_file}.key!"
-    except FileNotFoundError:
-        with open(key_path, "wb") as f:
-            f.write(Fernet.generate_key())
-        return f"Successfully created file named {key_file}.key"
 
 
 def create_pass(pass_file):
@@ -63,31 +75,12 @@ def create_pass(pass_file):
             return f"Successfully created file named {pass_file}.pass"
 
 
-def load_key(key_file):
-    if key_file == "":
-        return ""
-    key_path = f"credentials/keys/{key_file}.key"
-    try:
-        with open(key_path, "rb") as f:
-            return f.read()
-    except FileNotFoundError:
-        return
-
-
-def manage_pass(pass_file, key):
-    if pass_file == "" or key == "":
-        print("The password file/key can't be empty!")
+def password_manager(pass_file, key):
+    if pass_file == "":
+        print("The password file can't be empty!")
         return
     pass_path = f"credentials/passwords/{pass_file}.pass"
-    try:
-        if open(pass_path):
-            if key == None:
-                print("The key doesn't exist!")
-                return
-    except FileNotFoundError:
-        if key == None:
-            print("The password file/key doesn't exist!")
-            return
+    if not exists(pass_path):
         print("The password file doesn't exist!")
         return
     while True:
