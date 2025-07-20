@@ -5,6 +5,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from os import makedirs
 from os.path import exists
 from os import urandom
+import json
 
 
 def main():
@@ -66,20 +67,20 @@ def show_menu():
 def create_pass(pass_file):
     if pass_file == "":
         return "The password file can't be empty!"
-    pass_path = f"credentials/passwords/{pass_file}.pass"
+    pass_path = f"credentials/passwords/{pass_file}.json"
     try:
         with open(pass_path) as _:
-            return f"There's already a file named {pass_file}.pass!"
+            return f"There's already a file named {pass_file}.json!"
     except FileNotFoundError:
         with open(pass_path, "w") as _:
-            return f"Successfully created file named {pass_file}.pass"
+            return f"Successfully created file named {pass_file}.json"
 
 
 def password_manager(pass_file, key):
     if pass_file == "":
         print("The password file can't be empty!")
         return
-    pass_path = f"credentials/passwords/{pass_file}.pass"
+    pass_path = f"credentials/passwords/{pass_file}.json"
     if not exists(pass_path):
         print("The password file doesn't exist!")
         return
@@ -93,21 +94,36 @@ def password_manager(pass_file, key):
                 if new_site == "" or new_password == "":
                     print("The site/password can't be empty!")
                     continue
+                try:
+                    with open(pass_path, "r") as f:
+                        data = json.load(f)
+                except json.JSONDecodeError:
+                    data = []
+                encrypt_site = Fernet(key).encrypt(new_site.encode())
                 encrypt_pass = Fernet(key).encrypt(new_password.encode())
-                with open(pass_path, "a") as f:
-                    f.write(f"{new_site}:{encrypt_pass.decode()}\n")
-                print(f"Successfully added password to {pass_file}.pass")
+                with open(pass_path, "w") as f:
+                    encrypted = {
+                        "site": encrypt_site.decode(),
+                        "password": encrypt_pass.decode()
+                    }
+                    data.append(encrypted)
+                    json.dump(data, f, indent=2)
+                print(f"Successfully added password to {pass_file}")
             case "g":
-                with open(pass_path, "rb") as f:
-                    list = f.readlines()
+                try:
+                    with open(pass_path, "r") as f:
+                        data = json.load(f)
+                except json.JSONDecodeError:
+                    print("Password file is empty!")
+                    continue
                 print("""\n          Passwords\n""")
-                for i, line in enumerate(list):
-                    site, encrypted_pass = line.decode().split(":")
+                for i, entry in enumerate(data):
                     try:
-                        password = Fernet(key).decrypt(encrypted_pass.encode()).decode()
+                        site = Fernet(key).decrypt(entry["site"].encode()).decode()
+                        password = Fernet(key).decrypt(entry["password"].encode()).decode()
                         print(f"    {i + 1}. {site}: {password}")
                     except InvalidToken:
-                        print(f"    {i + 1}. Invalid key!")
+                        print(f"    {i + 1}. Invalid master password!")
             case "q":
                 break
 
