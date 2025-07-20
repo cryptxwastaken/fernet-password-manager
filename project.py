@@ -2,10 +2,16 @@ import base64
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from os import makedirs
-from os.path import exists
-from os import urandom
+from os import makedirs, urandom, listdir
+from os.path import exists, splitext
 import json
+
+
+def show_existing_files():
+    print("""\n          Existing Password Files\n""")
+    dir_list = listdir("credentials/passwords")
+    for file in dir_list:
+        print(splitext(file)[0])
 
 
 def main():
@@ -54,9 +60,11 @@ def show_menu():
     [Q] Quit\n\n"""
         ).lower().strip():
             case "+":
+                show_existing_files()
                 print(create_pass(input("\nCreate a password file named: ").strip()))
             case "1":
                 master_password = input("Master password: ")
+                show_existing_files()
                 password_manager(
                     input("\nPassword file: ").strip(), derive_key(read_salt(), master_password)
                 )
