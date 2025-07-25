@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from os import makedirs, urandom, listdir
 from os.path import exists, splitext
 import json
-
+from pwinput import pwinput
 
 def show_existing_files():
     print("""\n          Existing Password Files\n""")
@@ -63,7 +63,8 @@ def show_menu():
                 show_existing_files()
                 print(create_pass(input("\nCreate a password file named: ").strip()))
             case "1":
-                master_password = input("Master password: ")
+                # Hides user input with asterisks
+                master_password = pwinput(prompt="Master password: ")
                 show_existing_files()
                 password_manager(
                     input("\nPassword file: ").strip(), derive_key(read_salt(), master_password)
