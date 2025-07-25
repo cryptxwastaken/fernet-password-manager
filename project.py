@@ -151,7 +151,7 @@ def password_manager(pass_file, key):
                     print("     Invalid input!")
                     continue
 
-                section = input("\nEdit:\n[1] Site\n[2] Password\n")
+                section = input("\nEdit:\n[1] Site\n[2] Password\n[Q] Cancel\n").lower().strip()
 
                 if section == "1":
                     new_site = input("Change site to: ")
@@ -177,6 +177,8 @@ def password_manager(pass_file, key):
                         json.dump(data, f, indent=2)
 
                     print(f"    {choice}. {site}: {new_password}")
+                elif section == "q":
+                    print("Canceled.")
                 else:
                     print("Invalid input.")
             case "r":
