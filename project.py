@@ -83,6 +83,24 @@ def create_pass(pass_file):
     except FileNotFoundError:
         with open(pass_path, "w") as _:
             return f"Successfully created file named {pass_file}.json"
+        
+
+def get_password(pass_path, key):
+    try:
+        with open(pass_path, "r") as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        print("Password file is empty!")
+        return
+    print("""\n          Passwords\n""")
+    for i, entry in enumerate(data):
+        try:
+            site = Fernet(key).decrypt(entry["site"].encode()).decode()
+            password = Fernet(key).decrypt(entry["password"].encode()).decode()
+            print(f"    {i + 1}. {site}: {password}")
+        except InvalidToken:
+            print(f"    {i + 1}. Invalid master password!")
+    return data
 
 
 def password_manager(pass_file, key):
@@ -95,7 +113,7 @@ def password_manager(pass_file, key):
         return
     while True:
         match input(
-            """\n[A] Add a new password\n[G] Get passwords\n[Q] Cancel\n\n"""
+            """\n[A] Add a new password\n[E] Edit passwords\n[G] Get passwords\n[Q] Cancel\n\n"""
         ).lower().strip():
             case "a":
                 new_site = input("\nSite: ").strip()
@@ -118,21 +136,50 @@ def password_manager(pass_file, key):
                     data.append(encrypted)
                     json.dump(data, f, indent=2)
                 print(f"Successfully added password to {pass_file}")
-            case "g":
+            case "e":
+                data = get_password(pass_path, key)
                 try:
-                    with open(pass_path, "r") as f:
-                        data = json.load(f)
-                except json.JSONDecodeError:
-                    print("Password file is empty!")
+                    choice = int(input("\nType which number to edit: "))
+                    site = Fernet(key).decrypt(data[choice - 1]["site"].encode()).decode()
+                    password = Fernet(key).decrypt(data[choice - 1]["password"].encode()).decode()
+                    print(f"    {choice}. {site}: {password}")
+                except InvalidToken:
+                    print(f"    {choice}. Invalid master password!")
                     continue
-                print("""\n          Passwords\n""")
-                for i, entry in enumerate(data):
-                    try:
-                        site = Fernet(key).decrypt(entry["site"].encode()).decode()
-                        password = Fernet(key).decrypt(entry["password"].encode()).decode()
-                        print(f"    {i + 1}. {site}: {password}")
-                    except InvalidToken:
-                        print(f"    {i + 1}. Invalid master password!")
+                except:
+                    print("     Invalid input!")
+                    continue
+
+                section = input("\nEdit:\n[1] Site\n[2] Password\n")
+
+                if section == "1":
+                    new_site = input("Change site to: ")
+                    if new_site == "":
+                        print("The site can't be empty!")
+                        continue
+                    encrypt_site = Fernet(key).encrypt(new_site.encode())
+
+                    with open(pass_path, "w") as f:
+                                        data[choice - 1]["site"] = encrypt_site.decode()
+                                        json.dump(data, f, indent=2)
+
+                    print(f"    {choice}. {new_site}: {password}")
+                elif section == "2":
+                    new_password = input("Change password to: ")
+                    if new_password == "":
+                        print("The password can't be empty!")
+                        continue
+                    encrypt_password = Fernet(key).encrypt(new_password.encode())
+
+                    with open(pass_path, "w") as f:
+                                        data[choice - 1]["password"] = encrypt_password.decode()
+                                        json.dump(data, f, indent=2)
+
+                    print(f"    {choice}. {site}: {new_password}")
+                else:
+                    print("Invalid input.")
+            case "g":
+                get_password(pass_path, key)
             case "q":
                 break
 
