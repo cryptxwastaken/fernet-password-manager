@@ -7,6 +7,7 @@ from os.path import exists, splitext
 import json
 from pwinput import pwinput
 
+
 def show_existing_files():
     print("""\n          Existing Password Files\n""")
     dir_list = listdir("credentials/passwords")
@@ -113,7 +114,7 @@ def password_manager(pass_file, key):
         return
     while True:
         match input(
-            """\n[A] Add a new password\n[E] Edit passwords\n[G] Get passwords\n[Q] Cancel\n\n"""
+            """\n[A] Add a new password\n[E] Edit password\n[R] Remove password\n[G] Get passwords\n[Q] Cancel\n\n"""
         ).lower().strip():
             case "a":
                 new_site = input("\nSite: ").strip()
@@ -160,8 +161,8 @@ def password_manager(pass_file, key):
                     encrypt_site = Fernet(key).encrypt(new_site.encode())
 
                     with open(pass_path, "w") as f:
-                                        data[choice - 1]["site"] = encrypt_site.decode()
-                                        json.dump(data, f, indent=2)
+                        data[choice - 1]["site"] = encrypt_site.decode()
+                        json.dump(data, f, indent=2)
 
                     print(f"    {choice}. {new_site}: {password}")
                 elif section == "2":
@@ -172,12 +173,36 @@ def password_manager(pass_file, key):
                     encrypt_password = Fernet(key).encrypt(new_password.encode())
 
                     with open(pass_path, "w") as f:
-                                        data[choice - 1]["password"] = encrypt_password.decode()
-                                        json.dump(data, f, indent=2)
+                        data[choice - 1]["password"] = encrypt_password.decode()
+                        json.dump(data, f, indent=2)
 
                     print(f"    {choice}. {site}: {new_password}")
                 else:
                     print("Invalid input.")
+            case "r":
+                data = get_password(pass_path, key)
+                try:
+                    choice = int(input("\nType which number to remove: "))
+                    site = Fernet(key).decrypt(data[choice - 1]["site"].encode()).decode()
+                    password = Fernet(key).decrypt(data[choice - 1]["password"].encode()).decode()
+                    print(f"    {choice}. {site}: {password}")
+                except InvalidToken:
+                    print(f"    {choice}. Invalid master password!")
+                    continue
+                except:
+                    print("     Invalid input!")
+                    continue
+                
+                confirmation = input("Are you sure you want to delete this entry? This cannot be undone.\n[Y]/[N]\n"
+                                     ).lower().strip()
+                if confirmation == "y":
+                    with open(pass_path, "w") as f:
+                        data.pop(choice - 1)
+                        json.dump(data, f, indent=2)
+                elif confirmation == "n":
+                    print("Canceled.")
+                else:
+                    print("Invalid input! Canceled.")
             case "g":
                 get_password(pass_path, key)
             case "q":
