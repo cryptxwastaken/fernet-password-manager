@@ -6,6 +6,7 @@ from os import makedirs, urandom, listdir
 from os.path import exists, splitext
 import json
 from pwinput import pwinput
+import pyperclip
 
 
 def show_existing_files():
@@ -206,7 +207,31 @@ def password_manager(pass_file, key):
                 else:
                     print("Invalid input! Canceled.")
             case "g":
-                get_password(pass_path, key)
+                get_password_options(pass_path, key)
+            case "q":
+                break
+
+def get_password_options(pass_path, key):
+    data = get_password(pass_path, key)
+    while True:
+        match input(
+            """\n[C] Copy password to clipboard\n[Q] Cancel\n\n"""
+        ).lower().strip():
+            case "c":
+                try:
+                    choice = int(input("\nType which number to copy: "))
+                    password = Fernet(key).decrypt(data[choice - 1]["password"].encode()).decode()
+                    pyperclip.copy(password)
+                    print("Password copied to clipboard.")
+                    break
+                except InvalidToken:
+                    print(f"     Invalid master password!")
+                    get_password(pass_path, key)
+                    continue
+                except:
+                    print("     Invalid input!")
+                    get_password(pass_path, key)
+                    continue
             case "q":
                 break
 
