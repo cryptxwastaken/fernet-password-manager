@@ -2,7 +2,7 @@ import base64
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from os import makedirs, urandom, listdir
+from os import makedirs, urandom, listdir, chmod
 from os.path import exists, splitext
 import json
 from pwinput import pwinput
@@ -18,8 +18,9 @@ def show_existing_files():
 
 def main():
     if not exists("credentials"):
-        makedirs("credentials/passwords")
-        makedirs("credentials/keys")
+        # Only the owner can read, write, or enter the directory
+        makedirs("credentials/passwords", mode=0o700)
+        makedirs("credentials/keys", mode=0o700)
         print("Credentials created.")
 
     salt_path = "credentials/keys/salt.key"
@@ -27,9 +28,11 @@ def main():
         with open(salt_path, "wb") as f:
             # Secure values are 16 bytes or longer
             f.write(urandom(16))
+        # Set file permissions to read/write only for the owner
+        chmod(salt_path, 0o600)
         print("Salt file created.")
     else:
-        print("Exisiting salt file found.")
+        print("Existing salt file found.")
 
     show_menu()
 
@@ -83,8 +86,13 @@ def create_pass(pass_file):
         with open(pass_path) as _:
             return f"There's already a file named {pass_file}.json!"
     except FileNotFoundError:
-        with open(pass_path, "w") as _:
-            return f"Successfully created file named {pass_file}.json"
+        with open(pass_path, "w") as f:
+            json.dump([], f)
+
+        # Set file permissions to read/write only for the owner
+        chmod(pass_path, 0o600)
+
+        return f"Successfully created file named {pass_file}.json"
         
 
 def get_password(pass_path, key):
