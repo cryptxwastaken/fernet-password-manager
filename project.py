@@ -146,7 +146,7 @@ def password_manager(pass_file, key):
                     password = Fernet(key).decrypt(data[choice - 1]["password"].encode()).decode()
                     print(f"    {choice}. {site}: {password}")
                 except InvalidToken:
-                    print(f"    {choice}. Invalid master password!")
+                    print(f"    Invalid master password!")
                     continue
                 except:
                     print("     Invalid input!")
