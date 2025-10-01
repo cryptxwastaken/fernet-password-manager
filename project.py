@@ -1,10 +1,10 @@
 import base64
-from cryptography.fernet import Fernet, InvalidToken
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from os import makedirs, urandom, listdir, chmod
 from os.path import exists, splitext
 import json
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from pwinput import pwinput
 import pyperclip
 
@@ -39,9 +39,10 @@ def main():
 
 def read_salt():
     salt_path = "credentials/keys/salt.key"
-    if exists(salt_path):
-        with open(salt_path, "rb") as f:
-            salt = f.read()
+    if not exists(salt_path):
+        raise FileNotFoundError("Salt file not found!")
+    with open(salt_path, "rb") as f:
+        salt = f.read()
     return salt
 
 def derive_key(salt, master_password):
@@ -52,7 +53,7 @@ def derive_key(salt, master_password):
     # As of January 2025 Django recommends at least 1,200,000 iterations
     iterations = 1_200_000,
     )
-    # Fernet requires keys to be URL-safe Base64 encoded 
+    # Fernet requires keys to be URL-safe Base64 encoded
     return base64.urlsafe_b64encode(kdf.derive(master_password.encode()))
 
 
@@ -83,21 +84,21 @@ def create_pass(pass_file):
         return "The password file can't be empty!"
     pass_path = f"credentials/passwords/{pass_file}.json"
     try:
-        with open(pass_path) as _:
+        with open(pass_path, encoding="utf-8") as _:
             return f"There's already a file named {pass_file}.json!"
     except FileNotFoundError:
-        with open(pass_path, "w") as f:
+        with open(pass_path, "w", encoding="utf-8") as f:
             json.dump([], f)
 
         # Set file permissions to read/write only for the owner
         chmod(pass_path, 0o600)
 
         return f"Successfully created file named {pass_file}.json"
-        
+
 
 def get_password(pass_path, key):
     try:
-        with open(pass_path, "r") as f:
+        with open(pass_path, encoding="utf-8") as f:
             data = json.load(f)
     except json.JSONDecodeError:
         print("Password file is empty!")
@@ -123,7 +124,7 @@ def password_manager(pass_file, key):
         return
     while True:
         match input(
-            """\n[A] Add a new password\n[E] Edit password\n[R] Remove password\n[G] Get passwords\n[Q] Cancel\n\n"""
+            "\n[A] Add a new password\n[E] Edit password\n[R] Remove password\n[G] Get passwords\n[Q] Cancel\n\n"
         ).lower().strip():
             case "a":
                 new_site = input("\nSite: ").strip()
@@ -132,13 +133,13 @@ def password_manager(pass_file, key):
                     print("The site/password can't be empty!")
                     continue
                 try:
-                    with open(pass_path, "r") as f:
+                    with open(pass_path, "r", encoding="utf-8") as f:
                         data = json.load(f)
                 except json.JSONDecodeError:
                     data = []
                 encrypt_site = Fernet(key).encrypt(new_site.encode())
                 encrypt_pass = Fernet(key).encrypt(new_password.encode())
-                with open(pass_path, "w") as f:
+                with open(pass_path, "w", encoding="utf-8") as f:
                     encrypted = {
                         "site": encrypt_site.decode(),
                         "password": encrypt_pass.decode()
@@ -154,9 +155,9 @@ def password_manager(pass_file, key):
                     password = Fernet(key).decrypt(data[choice - 1]["password"].encode()).decode()
                     print(f"    {choice}. {site}: {password}")
                 except InvalidToken:
-                    print(f"    Invalid master password!")
+                    print("    Invalid master password!")
                     continue
-                except:
+                except (ValueError, IndexError, TypeError):
                     print("     Invalid input!")
                     continue
 
@@ -169,7 +170,7 @@ def password_manager(pass_file, key):
                         continue
                     encrypt_site = Fernet(key).encrypt(new_site.encode())
 
-                    with open(pass_path, "w") as f:
+                    with open(pass_path, "w", encoding="utf-8") as f:
                         data[choice - 1]["site"] = encrypt_site.decode()
                         json.dump(data, f, indent=2)
 
@@ -181,7 +182,7 @@ def password_manager(pass_file, key):
                         continue
                     encrypt_password = Fernet(key).encrypt(new_password.encode())
 
-                    with open(pass_path, "w") as f:
+                    with open(pass_path, "w", encoding="utf-8") as f:
                         data[choice - 1]["password"] = encrypt_password.decode()
                         json.dump(data, f, indent=2)
 
@@ -200,14 +201,14 @@ def password_manager(pass_file, key):
                 except InvalidToken:
                     print(f"    {choice}. Invalid master password!")
                     continue
-                except:
+                except (ValueError, IndexError, TypeError):
                     print("     Invalid input!")
                     continue
-                
+
                 confirmation = input("Are you sure you want to delete this entry? This cannot be undone.\n[Y]/[N]\n"
                                      ).lower().strip()
                 if confirmation == "y":
-                    with open(pass_path, "w") as f:
+                    with open(pass_path, "w", encoding="utf-8") as f:
                         data.pop(choice - 1)
                         json.dump(data, f, indent=2)
                 elif confirmation == "n":
@@ -233,10 +234,10 @@ def get_password_options(pass_path, key):
                     print("Password copied to clipboard.")
                     break
                 except InvalidToken:
-                    print(f"     Invalid master password!")
+                    print("     Invalid master password!")
                     get_password(pass_path, key)
                     continue
-                except:
+                except (ValueError, IndexError, TypeError):
                     print("     Invalid input!")
                     get_password(pass_path, key)
                     continue
