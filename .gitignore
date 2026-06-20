@@ -1,4 +1,5 @@
 credentials/
+.last_vault
 __pycache__/
 *.py[cod]
 .pytest_cache/

@@ -14,6 +14,7 @@ CREDENTIALS_DIR = "credentials"
 PASSWORDS_DIR = "credentials/passwords"
 KEYS_DIR = "credentials/keys"
 SALT_PATH = "credentials/keys/salt.key"
+LAST_VAULT_PATH = ".last_vault"
 
 
 # --- Setup helpers ---
@@ -124,6 +125,50 @@ def decrypt_entry(key: bytes, entry: dict) -> tuple[str, str]:
 
 def decrypt_entries(key: bytes, entries: list[dict]) -> list[tuple[str, str]]:
     return [decrypt_entry(key, entry) for entry in entries]
+
+
+def get_default_vault() -> str | None:
+    if not exists(LAST_VAULT_PATH):
+        return None
+    name = open(LAST_VAULT_PATH, encoding="utf-8").read().strip()
+    if name and exists(vault_path(name)):
+        return name
+    return None
+
+
+def set_default_vault(name: str) -> None:
+    with open(LAST_VAULT_PATH, "w", encoding="utf-8") as f:
+        f.write(name)
+
+
+def search_entries(
+    pass_file: str, key: bytes, query: str
+) -> list[tuple[int, str, str]]:
+    entries = load_entries(pass_file)
+    query_lower = query.lower().strip()
+    results = []
+    for index, entry in enumerate(entries):
+        try:
+            site, password = decrypt_entry(key, entry)
+        except InvalidToken:
+            continue
+        if query_lower == "" or query_lower in site.lower():
+            results.append((index, site, password))
+    return results
+
+
+def verify_master_password(master_password: str, pass_file: str | None = None) -> bytes:
+    key = derive_key(read_salt(), master_password)
+    vaults = [pass_file] if pass_file else list_vaults()
+    for vault_name in vaults:
+        if vault_name is None:
+            continue
+        for entry in load_entries(vault_name):
+            try:
+                decrypt_entry(key, entry)
+            except InvalidToken as exc:
+                raise InvalidToken("Invalid master password!") from exc
+    return key
 
 
 # --- CLI helpers ---
