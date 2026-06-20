@@ -1,0 +1,13 @@
+credentials/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+*.key
+*.pass
+test_*.json
