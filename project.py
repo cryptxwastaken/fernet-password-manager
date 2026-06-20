@@ -1,3 +1,4 @@
+import argparse
 import base64
 import json
 from os import chmod, listdir, makedirs, urandom
@@ -351,4 +352,16 @@ def get_password_options(pass_file: str, key: bytes) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Fernet Password Manager")
+    parser.add_argument(
+        "--cli",
+        action="store_true",
+        help="Run the text menu interface for debugging",
+    )
+    args = parser.parse_args()
+    if args.cli:
+        main()
+    else:
+        from gui import run_gui
+
+        run_gui()
